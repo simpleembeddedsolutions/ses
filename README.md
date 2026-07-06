@@ -5,6 +5,17 @@ checklists, lessons learned, and references organized by interface and IC, with 
 teal/copper PCB-trace visual theme and **3D throughout**. Now a full-stack app with a
 real API, a SQLite database, and JWT authentication.
 
+## 🔗 Live demo
+
+**https://arulprakashu1-cpu.github.io/engineering-knowledge-base/**
+
+A free, backend-free build hosted on GitHub Pages: the same UI, but data lives in your
+browser (`localStorage`) instead of the server, so you can try everything instantly — it
+opens straight into a populated demo account. Built by the `VITE_STATIC=true` mode (see
+[`src/staticStore.ts`](src/staticStore.ts)) and deployed by
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml). For the real full-stack
+version (Express + SQLite + JWT), run it locally or deploy per the **Deploy** section below.
+
 ## Tech stack
 
 **Frontend**
