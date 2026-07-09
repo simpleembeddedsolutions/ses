@@ -31,6 +31,20 @@ export default function App() {
   const [topQuery, setTopQuery] = useState("");
   const [searchSeed, setSearchSeed] = useState<{ q: string; iface: string }>({ q: "", iface: "" });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Light / dark theme — saved choice wins, else follow the OS preference.
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    try {
+      const saved = localStorage.getItem("ekb.theme");
+      if (saved === "light" || saved === "dark") return saved;
+    } catch { /* ignore */ }
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches) return "dark";
+    return "light";
+  });
+  const toggleTheme = () => setTheme((t) => {
+    const next = t === "dark" ? "light" : "dark";
+    try { localStorage.setItem("ekb.theme", next); } catch { /* ignore */ }
+    return next;
+  });
   // Desktop-only collapse of the side menu (mobile uses the sidebarOpen drawer).
   const [navCollapsed, setNavCollapsed] = useState(() => {
     try { return localStorage.getItem("ekb.navCollapsed") === "1"; } catch { return false; }
@@ -139,7 +153,7 @@ export default function App() {
   };
 
   return (
-    <div className={"ekb-root" + (navCollapsed ? " nav-collapsed" : "")}>
+    <div className={"ekb-root" + (navCollapsed ? " nav-collapsed" : "")} data-theme={theme}>
       <GlobalStyle />
 
       {authLoading ? (
@@ -154,6 +168,8 @@ export default function App() {
               query={topQuery} setQuery={setTopQuery} onSearchSubmit={handleTopSearch}
               breadcrumb={<><FileText size={13} /><span>{breadcrumbLabel[page]}</span></>}
               onMenuClick={toggleNav}
+              theme={theme}
+              onToggleTheme={toggleTheme}
             />
             <main className="content">
               {entriesLoading ? (

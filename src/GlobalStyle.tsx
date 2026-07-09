@@ -23,7 +23,32 @@ export function GlobalStyle() {
         --btn-grad: #1f6feb; --btn-fg: #ffffff; --btn-glow: none;
         --hairline: transparent; --grid-line: transparent;
         --ring: rgba(31,111,235,0.25); --scan: transparent;
+        color-scheme: light;
       }
+      /* ============================================================
+         Dark theme — teal accent, harmonizing with the existing
+         [data-theme="dark"] accents already scattered below. Driven
+         entirely by CSS variables so the whole app flips at once.
+         ============================================================ */
+      .ekb-root[data-theme="dark"] {
+        --bg: #0a0f14; --bg-deep: #06090c;
+        --surface: #121a21; --surface-solid: #151e26; --surface-alt: #1c2730;
+        --border: #26323c; --border-strong: #3a4954;
+        --text: #e7edf2; --text-secondary: #94a2ad;
+        --accent: #3de0ce; --accent-strong: #7defdc; --accent-soft: rgba(61,224,206,0.12);
+        --copper: #e0b06a; --copper-soft: rgba(224,176,106,0.13);
+        --danger: #f0655a; --danger-soft: rgba(240,101,90,0.13);
+        --shadow: 0 1px 2px rgba(0,0,0,0.45); --shadow-lift: 0 12px 36px rgba(0,0,0,0.55);
+        --glow-accent: 0 0 0 1px rgba(61,224,206,0.05);
+        --btn-grad: linear-gradient(180deg, #43e6d4 0%, #2ec4b3 100%); --btn-fg: #04241f;
+        --btn-glow: 0 4px 18px rgba(61,224,206,0.25);
+        --hairline: rgba(61,224,206,0.14); --grid-line: transparent;
+        --ring: rgba(61,224,206,0.38); --scan: transparent;
+        color-scheme: dark;
+      }
+      /* Teal accent is light, so button/selection text must go dark for contrast. */
+      .ekb-root[data-theme="dark"] .btn-primary { color: #04241f; }
+      .ekb-root[data-theme="dark"] ::selection { background: rgba(61,224,206,0.26); color: #eef4f2; }
       .ekb-root {
         display: flex; min-height: 100vh; background: var(--bg); color: var(--text);
         font-family: var(--font-body); font-size: 14px; line-height: 1.5;

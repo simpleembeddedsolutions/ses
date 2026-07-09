@@ -1,14 +1,16 @@
 import React from "react";
-import { Search, Menu } from "lucide-react";
+import { Search, Menu, Sun, Moon } from "lucide-react";
 
 export function Topbar({
-  query, setQuery, onSearchSubmit, breadcrumb, onMenuClick,
+  query, setQuery, onSearchSubmit, breadcrumb, onMenuClick, theme, onToggleTheme,
 }: {
   query: string;
   setQuery: (q: string) => void;
   onSearchSubmit: (q: string) => void;
   breadcrumb: React.ReactNode;
   onMenuClick: () => void;
+  theme: "light" | "dark";
+  onToggleTheme: () => void;
 }) {
   return (
     <header className="topbar no-print">
@@ -27,6 +29,14 @@ export function Topbar({
           placeholder="Search knowledge, IC, interface, issue, lesson learned…"
         />
       </form>
+      <button
+        className="icon-btn theme-toggle"
+        onClick={onToggleTheme}
+        aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+        title={theme === "dark" ? "Light theme" : "Dark theme"}
+      >
+        {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+      </button>
     </header>
   );
 }
