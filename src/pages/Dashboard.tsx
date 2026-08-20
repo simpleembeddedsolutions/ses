@@ -1,6 +1,5 @@
 import { Clock, Network, Eye, ChevronRight, Boxes, LayoutDashboard, FilePlus2 } from "lucide-react";
 import type { Entry } from "../types";
-import { TYPE_COLOR } from "../data";
 import { fmtDate, TraceDivider, EmptyState } from "../lib";
 
 export interface InterfaceStat {
@@ -12,13 +11,14 @@ export interface InterfaceStat {
 }
 
 export function Dashboard({
-  entries, recentlyViewed, goToEntry, goToInterface, goToAdd,
+  entries, recentlyViewed, goToEntry, goToInterface, goToAdd, goToSearch,
 }: {
   entries: Entry[];
   recentlyViewed: string[];
   goToEntry: (id: string) => void;
   goToInterface: (name: string) => void;
   goToAdd: () => void;
+  goToSearch: () => void;
 }) {
   const totalEntries = entries.length;
   const totalInterfaces = new Set(entries.map((e) => e.interface)).size;
@@ -50,18 +50,18 @@ export function Dashboard({
       <TraceDivider />
 
       <div className="stat-row">
-        <div className="stat-card">
+        <button className="stat-card" onClick={goToSearch} title="Browse all entries">
           <div className="stat-label">Total Knowledge Entries</div>
           <div className="stat-value">{totalEntries}</div>
-        </div>
-        <div className="stat-card">
+        </button>
+        <button className="stat-card" onClick={goToSearch} title="Browse all entries">
           <div className="stat-label">Total Interfaces</div>
           <div className="stat-value">{totalInterfaces}</div>
-        </div>
-        <div className="stat-card">
+        </button>
+        <button className="stat-card" onClick={goToSearch} title="Browse all entries">
           <div className="stat-label">Total ICs</div>
           <div className="stat-value">{totalICs}</div>
-        </div>
+        </button>
       </div>
 
       <div className="two-col">
@@ -129,9 +129,9 @@ export function Dashboard({
               </div>
               <div className="ic-card-total">{it.total} <span>entries</span></div>
               <div className="ic-card-breakdown">
-                <span><i style={{ background: TYPE_COLOR["Requirement"] }} />{it.requirements} Req</span>
-                <span><i style={{ background: TYPE_COLOR["Checklist"] }} />{it.checklists} Chk</span>
-                <span><i style={{ background: TYPE_COLOR["Lesson Learned"] }} />{it.lessons} LL</span>
+                <span>{it.requirements} Req</span>
+                <span>{it.checklists} Chk</span>
+                <span>{it.lessons} LL</span>
               </div>
             </div>
           </button>

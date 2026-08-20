@@ -1,4 +1,4 @@
-import { ArrowLeft, Tag as TagIcon, Paperclip, ChevronRight, FileText, PencilLine, Trash2 } from "lucide-react";
+import { ArrowLeft, Tag as TagIcon, Paperclip, ChevronRight, FileText, PencilLine, Trash2, Download } from "lucide-react";
 import type { Entry, KnowledgeType } from "../types";
 import { fmtDate, fileIcon, renderContent, TraceDivider, TypeBadge } from "../lib";
 
@@ -27,17 +27,20 @@ export function KnowledgeDetail({
 
   return (
     <div className="page">
-      <button className="back-link" onClick={goBack}><ArrowLeft size={14} /> Back</button>
+      <button className="back-link no-print" onClick={goBack}><ArrowLeft size={14} /> Back</button>
 
       <div className="detail-head">
         <div className="page-title"><span className="page-title-icon"><FileText size={19} /></span><h1>{entry.title}</h1></div>
         <div className="detail-head-right">
-          {canModify && (
-            <div className="detail-actions">
-              <button className="btn-ghost" onClick={() => onEdit(entry)}><PencilLine size={14} /> Edit</button>
-              <button className="btn-danger-ghost" onClick={() => onDelete(entry)}><Trash2 size={14} /> Delete</button>
-            </div>
-          )}
+          <div className="detail-actions no-print">
+            {canModify && (
+              <>
+                <button className="btn-ghost" onClick={() => onEdit(entry)}><PencilLine size={14} /> Edit</button>
+                <button className="btn-danger-ghost" onClick={() => onDelete(entry)}><Trash2 size={14} /> Delete</button>
+              </>
+            )}
+            <button className="btn-ghost" onClick={() => window.print()}><Download size={14} /> Download PDF</button>
+          </div>
           <div className="detail-types">{entry.types.map((t) => <TypeBadge key={t} type={t} />)}</div>
         </div>
       </div>
@@ -72,7 +75,7 @@ export function KnowledgeDetail({
         </section>
       )}
 
-      <div className="related-grid">
+      <div className="related-grid no-print">
         {buckets.map(({ label, type }) => {
           const list = related(type);
           return (

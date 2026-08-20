@@ -1,11 +1,61 @@
 import React, { useState, useMemo, useRef } from "react";
 import {
   Check, Plus, Paperclip, X, Heading2, Bold, List, ListChecks, Code2, Link2,
-  Image as ImageIcon, Table2, FilePlus2, PencilLine, Loader2,
+  Image as ImageIcon, Table2, FilePlus2, PencilLine, Loader2, ListTree, FileEdit,
 } from "lucide-react";
 import type { Entry, KnowledgeType, Attachment } from "../types";
-import { INTERFACES, IC_LIBRARY, KNOWLEDGE_TYPES, TAG_LIBRARY, TYPE_COLOR } from "../data";
+import { INTERFACES, IC_LIBRARY, KNOWLEDGE_TYPES, TAG_LIBRARY, TYPE_DESCRIPTION } from "../data";
 import { uid, fileIcon, renderContent, fileToImageDataUrl, TraceDivider, TagChip } from "../lib";
+
+/* --------------------------------------------------------------------------
+ * A <select> of known values plus a one-click way to add a value that isn't
+ * in the list yet — used for Interface and IC, which are open-ended
+ * vocabularies that still benefit from picking rather than free typing.
+ * ------------------------------------------------------------------------ */
+function SelectAddField({
+  value, onChange, options, placeholder, adding, onStartAdd, newValue, onNewValueChange, onCommit, onCancel, optionTitle,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder: string;
+  adding: boolean;
+  onStartAdd: () => void;
+  newValue: string;
+  onNewValueChange: (v: string) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+  /** Optional per-option hover hint, e.g. a one-line description of a knowledge type. */
+  optionTitle?: (option: string) => string | undefined;
+}) {
+  if (adding) {
+    return (
+      <div className="select-add-row">
+        <input
+          autoFocus
+          value={newValue}
+          onChange={(e) => onNewValueChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); onCommit(); }
+            if (e.key === "Escape") { e.preventDefault(); onCancel(); }
+          }}
+          placeholder="Type the new value…"
+        />
+        <button type="button" className="select-add-confirm" onClick={onCommit} aria-label="Add"><Check size={15} /></button>
+        <button type="button" className="select-add-cancel" onClick={onCancel} aria-label="Cancel"><X size={15} /></button>
+      </div>
+    );
+  }
+  return (
+    <div className="select-add-row">
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="" disabled>{placeholder}</option>
+        {options.map((o) => <option key={o} value={o} title={optionTitle?.(o)}>{o}</option>)}
+      </select>
+      <button type="button" className="select-add-btn" onClick={onStartAdd} title="Add a new value"><Plus size={15} /></button>
+    </div>
+  );
+}
 
 /* --------------------------------------------------------------------------
  * Images are stored inline in the markdown as data-URIs, but a raw data-URI is
@@ -60,12 +110,14 @@ function clipboardTable(cd: DataTransfer): string | null {
 }
 
 export function AddKnowledge({
-  onSave, existingICs, existingInterfaces = [], initial, onCancel,
+  onSave, existingICs, existingInterfaces = [], existingTypes = [], initial, onCancel,
 }: {
   onSave: (entry: Entry) => Promise<void>;
   existingICs: string[];
   /** Interfaces already used across the user's entries (for suggestions). */
   existingInterfaces?: string[];
+  /** Knowledge types already used across the user's entries (for suggestions). */
+  existingTypes?: string[];
   /** When provided, the form edits this entry instead of creating a new one. */
   initial?: Entry | null;
   onCancel?: () => void;
@@ -88,8 +140,22 @@ export function AddKnowledge({
   const imgCounter = useRef(seed.current.count);
   const [attachments, setAttachments] = useState<Attachment[]>(initial?.attachments ?? []);
   const [error, setError] = useState("");
+  const [attempted, setAttempted] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Interface / IC pickers: a dropdown of known values plus an inline "add
+  // new" affordance. Newly added values are kept in session state so they're
+  // selectable immediately, even before the entry is saved.
+  const [ifaceAdding, setIfaceAdding] = useState(false);
+  const [ifaceNewVal, setIfaceNewVal] = useState("");
+  const [extraIfaces, setExtraIfaces] = useState<string[]>([]);
+  const [icAdding, setIcAdding] = useState(false);
+  const [icNewVal, setIcNewVal] = useState("");
+  const [extraICs, setExtraICs] = useState<string[]>([]);
+  const [typeAdding, setTypeAdding] = useState(false);
+  const [typeNewVal, setTypeNewVal] = useState("");
+  const [extraTypes, setExtraTypes] = useState<string[]>([]);
   const [imgBusy, setImgBusy] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -138,13 +204,28 @@ export function AddKnowledge({
   };
 
   const icOptions = useMemo(
-    () => Array.from(new Set([...IC_LIBRARY, ...existingICs])).sort(),
-    [existingICs]
+    () => Array.from(new Set([...IC_LIBRARY, ...existingICs, ...extraICs, ...(ic ? [ic] : [])])).sort(),
+    [existingICs, extraICs, ic]
   );
   const ifaceOptions = useMemo(
-    () => Array.from(new Set([...INTERFACES, ...existingInterfaces])).sort((a, b) => a.localeCompare(b)),
-    [existingInterfaces]
+    () => Array.from(new Set([...INTERFACES, ...existingInterfaces, ...extraIfaces, ...(iface ? [iface] : [])])).sort((a, b) => a.localeCompare(b)),
+    [existingInterfaces, extraIfaces, iface]
   );
+  const typeOptions = useMemo(
+    () => Array.from(new Set([...KNOWLEDGE_TYPES, ...existingTypes, ...extraTypes, ...(type ? [type] : [])])).sort((a, b) => a.localeCompare(b)),
+    [existingTypes, extraTypes, type]
+  );
+
+  const commitNewIface = () => {
+    const v = ifaceNewVal.trim();
+    if (v) { setExtraIfaces((prev) => (prev.includes(v) ? prev : [...prev, v])); setIface(v); }
+    setIfaceAdding(false); setIfaceNewVal("");
+  };
+  const commitNewIc = () => {
+    const v = icNewVal.trim();
+    if (v) { setExtraICs((prev) => (prev.includes(v) ? prev : [...prev, v])); setIc(v); }
+    setIcAdding(false); setIcNewVal("");
+  };
 
   // True when the form holds work that would be lost by switching type.
   const hasInput = () =>
@@ -156,6 +237,9 @@ export function AddKnowledge({
     setTags([]); setTagInput("");
     setContent(""); setImages({}); imgCounter.current = 0; setAttachments([]);
     undoStack.current = []; redoStack.current = []; lastSnap.current = 0;
+    setIfaceAdding(false); setIfaceNewVal(""); setIcAdding(false); setIcNewVal("");
+    setTypeAdding(false); setTypeNewVal("");
+    setAttempted(false);
   };
 
   // Picking a type: switching away from an in-progress entry asks to save first.
@@ -163,6 +247,11 @@ export function AddKnowledge({
     if (t === type) return;
     if (type !== null && hasInput()) { setPendingType(t); return; }
     setType(t);
+  };
+  const commitNewType = () => {
+    const v = typeNewVal.trim();
+    if (v) { setExtraTypes((prev) => (prev.includes(v) ? prev : [...prev, v])); requestType(v); }
+    setTypeAdding(false); setTypeNewVal("");
   };
 
   const addTag = (t: string) => {
@@ -234,7 +323,12 @@ export function AddKnowledge({
   // Persist the current entry. Returns whether it saved so callers (like the
   // switch-type prompt) can chain follow-up actions on success.
   const doSave = async (): Promise<boolean> => {
-    if (!title.trim() || !iface) { setError("Title and Interface are required."); return false; }
+    if (!title.trim() || !iface) {
+      setAttempted(true);
+      setError("Title and Interface are required.");
+      return false;
+    }
+    setAttempted(false);
     setError("");
     setSaving(true);
     const today = new Date().toISOString().slice(0, 10);
@@ -279,159 +373,173 @@ export function AddKnowledge({
 
   return (
     <div className="page">
-      <div className="page-head">
+      <div className="page-head page-head-row">
         <div className="page-title">
           <span className="page-title-icon">{isEdit ? <PencilLine size={19} /> : <FilePlus2 size={19} />}</span>
           <h1>{isEdit ? "Edit Knowledge" : "Add Knowledge"}</h1>
         </div>
-        <p className="page-sub">
-          {isEdit
-            ? "Update this entry — changes are saved to the knowledge base immediately."
-            : "Capture a requirement, checklist, lesson learned, or reference in one entry."}
-        </p>
+        <div className="page-head-actions">
+          {isEdit && <button className="btn-ghost" onClick={onCancel} disabled={saving}>Cancel</button>}
+          <button className="btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 size={15} className="spin" /> : <Check size={15} />}
+            {saving ? "Saving…" : isEdit ? "Save changes" : "Save entry"}
+          </button>
+        </div>
       </div>
       <TraceDivider />
 
       {error && <div className="banner error">{error}</div>}
 
-      <div className="form-grid">
-        <div className="field span-2">
-          <label>Title <span className="req">*</span></label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Ethernet differential pair impedance requirement" />
-        </div>
-
-        <div className="field">
-          <label>Interface <span className="req">*</span></label>
-          <input list="iface-options" value={iface} onChange={(e) => setIface(e.target.value)} placeholder="e.g. Ethernet — or type a new interface" />
-          <datalist id="iface-options">
-            {ifaceOptions.map((o) => <option key={o} value={o} />)}
-          </datalist>
-        </div>
-
-        <div className="field">
-          <label>IC</label>
-          <input list="ic-options" value={ic} onChange={(e) => setIc(e.target.value)} placeholder="e.g. MAX96752 or type a new one" />
-          <datalist id="ic-options">
-            {icOptions.map((o) => <option key={o} value={o} />)}
-          </datalist>
-        </div>
-
-        <div className="field">
-          <label>Project</label>
-          <input value={project} onChange={(e) => setProject(e.target.value)} placeholder="Optional — e.g. Camera ECU Gen2" />
-        </div>
-
-        <div className="field">
-          <label>Knowledge Type</label>
-          <div className="chip-toggle-row">
-            {KNOWLEDGE_TYPES.map((t) => (
-              <button
-                type="button" key={t}
-                className={"chip-toggle" + (type === t ? " active" : "")}
-                style={{ ["--dot" as string]: TYPE_COLOR[t] } as React.CSSProperties}
-                onClick={() => requestType(t)}
-              >
-                <span className="badge-dot" />{t}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="field span-2">
-          <label>Tags</label>
-          <div className="tag-input-row">
-            {tags.map((t) => <TagChip key={t} label={t} onRemove={() => setTags(tags.filter((x) => x !== t))} />)}
+      <section className="panel">
+        <div className="panel-head"><ListTree size={14} /><h2>Details</h2></div>
+        <div className="form-grid">
+          <div className={"field span-2" + (attempted && !title.trim() ? " invalid" : "")}>
+            <label>Title <span className="req">*</span></label>
             <input
-              className="tag-input"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }}
-              placeholder="Type a tag, press Enter…"
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Ethernet differential pair impedance requirement"
             />
           </div>
-          <div className="quick-tags">
-            {TAG_LIBRARY.filter((t) => !tags.includes(t)).map((t) => (
-              <button type="button" key={t} className="quick-tag" onClick={() => addTag(t)}><Plus size={11} />{t}</button>
-            ))}
-          </div>
-        </div>
 
-        <div className="field span-2">
-          <label>Content</label>
-          <div className="editor">
-            <div className="editor-toolbar">
-              <button type="button" title="Heading" onClick={() => insertSnippet("\n## Heading\n")}><Heading2 size={15} /></button>
-              <button type="button" title="Bold" onClick={() => insertSnippet("**bold text**")}><Bold size={15} /></button>
-              <button type="button" title="Bullet list" onClick={() => insertSnippet("\n- item\n")}><List size={15} /></button>
-              <button type="button" title="Checklist" onClick={() => insertSnippet("\n- [ ] item\n")}><ListChecks size={15} /></button>
-              <button type="button" title="Code block" onClick={() => insertSnippet("\n```\ncode\n```\n")}><Code2 size={15} /></button>
-              <button type="button" title="Link" onClick={() => insertSnippet("[link text](https://)")}><Link2 size={15} /></button>
-              <button
-                type="button" title="Insert image" disabled={imgBusy}
-                onClick={() => imgInputRef.current?.click()}
-              >
-                {imgBusy ? <Loader2 size={15} className="spin" /> : <ImageIcon size={15} />}
-              </button>
-              <button type="button" title="Insert table" onClick={() => insertSnippet("\n| Column A | Column B | Column C |\n| --- | --- | --- |\n| value | value | value |\n| value | value | value |\n")}><Table2 size={15} /></button>
+          <div className="field-quad">
+            <div className={"field" + (attempted && !iface ? " invalid" : "")}>
+              <label>Interface <span className="req">*</span></label>
+              <SelectAddField
+                value={iface} onChange={setIface} options={ifaceOptions}
+                placeholder="Select interface…"
+                adding={ifaceAdding} onStartAdd={() => setIfaceAdding(true)}
+                newValue={ifaceNewVal} onNewValueChange={setIfaceNewVal}
+                onCommit={commitNewIface} onCancel={() => { setIfaceAdding(false); setIfaceNewVal(""); }}
+              />
+            </div>
+
+            <div className="field">
+              <label>IC</label>
+              <SelectAddField
+                value={ic} onChange={setIc} options={icOptions}
+                placeholder="Select IC (optional)…"
+                adding={icAdding} onStartAdd={() => setIcAdding(true)}
+                newValue={icNewVal} onNewValueChange={setIcNewVal}
+                onCommit={commitNewIc} onCancel={() => { setIcAdding(false); setIcNewVal(""); }}
+              />
+            </div>
+
+            <div className="field">
+              <label>Project</label>
+              <input value={project} onChange={(e) => setProject(e.target.value)} placeholder="Optional — e.g. Camera ECU Gen2" />
+            </div>
+
+            <div className="field">
+              <label>Knowledge Type</label>
+              <SelectAddField
+                value={type ?? ""} onChange={(v) => requestType(v)} options={typeOptions}
+                placeholder="Select type…"
+                adding={typeAdding} onStartAdd={() => setTypeAdding(true)}
+                newValue={typeNewVal} onNewValueChange={setTypeNewVal}
+                onCommit={commitNewType} onCancel={() => { setTypeAdding(false); setTypeNewVal(""); }}
+                optionTitle={(o) => TYPE_DESCRIPTION[o]}
+              />
+            </div>
+          </div>
+
+          <div className="field span-2">
+            <label>Tags</label>
+            <div className="tag-input-row">
+              {tags.map((t) => <TagChip key={t} label={t} onRemove={() => setTags(tags.filter((x) => x !== t))} />)}
               <input
-                ref={imgInputRef} type="file" accept="image/*" hidden
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) insertImage(f); e.target.value = ""; }}
+                className="tag-input"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }}
+                placeholder="Type a tag, press Enter…"
               />
             </div>
-            <div className="editor-body">
-              <textarea
-                ref={taRef}
-                value={content}
-                onChange={(e) => onContentChange(e.target.value)}
-                onKeyDown={onEditorKeyDown}
-                onPaste={handlePaste}
-                onDrop={handleEditorDrop}
-                onDragOver={(e) => { if (e.dataTransfer?.types.includes("Files")) e.preventDefault(); }}
-                placeholder="Write requirement details, checklist items, root cause, fix… Use the toolbar for headings, lists, tables, and code. Paste a table from Excel and it becomes a formatted table. Ctrl+Z / Ctrl+Y to undo/redo."
-              />
-              <div className="editor-preview">
-                <div className="editor-preview-label">Preview</div>
-                {content.trim() ? renderContent(expandImages(content, images)) : <div className="editor-preview-empty">Preview appears here as you type.</div>}
-              </div>
+            <div className="quick-tags">
+              {TAG_LIBRARY.filter((t) => !tags.includes(t)).map((t) => (
+                <button type="button" key={t} className="quick-tag" onClick={() => addTag(t)}><Plus size={11} />{t}</button>
+              ))}
             </div>
-            {Object.entries(images).filter(([id]) => content.includes(`img:${id}`)).length > 0 && (
-              <div className="editor-images">
-                <span className="editor-images-label"><ImageIcon size={12} /> Images in this entry</span>
-                <div className="editor-images-row">
-                  {Object.entries(images)
-                    .filter(([id]) => content.includes(`img:${id}`))
-                    .map(([id, uri]) => (
-                      <div className="editor-image-thumb" key={id}>
-                        <img src={uri} alt="" />
-                        <span className="editor-image-tag">{id}</span>
-                        <button type="button" onClick={() => removeImage(id)} aria-label="Remove image"><X size={12} /></button>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
+      </section>
 
-        <div className="field span-2">
-          <label>Attachments</label>
-          <label className="dropzone">
-            <Paperclip size={16} />
-            <span>Drop files or click to attach — PDF, Excel, Word, PNG, JPG, ZIP</span>
-            <input type="file" multiple hidden onChange={(e) => e.target.files && handleFiles(e.target.files)} />
-          </label>
-          {attachments.length > 0 && (
-            <div className="attachment-list">
-              {attachments.map((a, idx) => (
-                <div className="attachment-item" key={idx}>
-                  {fileIcon(a.type)}<span>{a.name}</span>
-                  <button onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))} aria-label="Remove attachment"><X size={12} /></button>
-                </div>
-              ))}
+      <section className="panel">
+        <div className="panel-head"><FileEdit size={14} /><h2>Content</h2></div>
+        <div className="editor">
+          <div className="editor-toolbar">
+            <button type="button" title="Heading" onClick={() => insertSnippet("\n## Heading\n")}><Heading2 size={15} /></button>
+            <button type="button" title="Bold" onClick={() => insertSnippet("**bold text**")}><Bold size={15} /></button>
+            <button type="button" title="Bullet list" onClick={() => insertSnippet("\n- item\n")}><List size={15} /></button>
+            <button type="button" title="Checklist" onClick={() => insertSnippet("\n- [ ] item\n")}><ListChecks size={15} /></button>
+            <button type="button" title="Code block" onClick={() => insertSnippet("\n```\ncode\n```\n")}><Code2 size={15} /></button>
+            <button type="button" title="Link" onClick={() => insertSnippet("[link text](https://)")}><Link2 size={15} /></button>
+            <button
+              type="button" title="Insert image" disabled={imgBusy}
+              onClick={() => imgInputRef.current?.click()}
+            >
+              {imgBusy ? <Loader2 size={15} className="spin" /> : <ImageIcon size={15} />}
+            </button>
+            <button type="button" title="Insert table" onClick={() => insertSnippet("\n| Column A | Column B | Column C |\n| --- | --- | --- |\n| value | value | value |\n| value | value | value |\n")}><Table2 size={15} /></button>
+            <input
+              ref={imgInputRef} type="file" accept="image/*" hidden
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) insertImage(f); e.target.value = ""; }}
+            />
+          </div>
+          <div className="editor-body">
+            <textarea
+              ref={taRef}
+              value={content}
+              onChange={(e) => onContentChange(e.target.value)}
+              onKeyDown={onEditorKeyDown}
+              onPaste={handlePaste}
+              onDrop={handleEditorDrop}
+              onDragOver={(e) => { if (e.dataTransfer?.types.includes("Files")) e.preventDefault(); }}
+              placeholder="Write requirement details, checklist items, root cause, fix… Use the toolbar for headings, lists, tables, and code. Paste a table from Excel and it becomes a formatted table. Ctrl+Z / Ctrl+Y to undo/redo."
+            />
+            <div className="editor-preview">
+              <div className="editor-preview-label">Preview</div>
+              {content.trim() ? renderContent(expandImages(content, images)) : <div className="editor-preview-empty">Preview appears here as you type.</div>}
+            </div>
+          </div>
+          {Object.entries(images).filter(([id]) => content.includes(`img:${id}`)).length > 0 && (
+            <div className="editor-images">
+              <span className="editor-images-label"><ImageIcon size={12} /> Images in this entry</span>
+              <div className="editor-images-row">
+                {Object.entries(images)
+                  .filter(([id]) => content.includes(`img:${id}`))
+                  .map(([id, uri]) => (
+                    <div className="editor-image-thumb" key={id}>
+                      <img src={uri} alt="" />
+                      <span className="editor-image-tag">{id}</span>
+                      <button type="button" onClick={() => removeImage(id)} aria-label="Remove image"><X size={12} /></button>
+                    </div>
+                  ))}
+              </div>
             </div>
           )}
         </div>
-      </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-head"><Paperclip size={14} /><h2>Attachments</h2></div>
+        <label className="dropzone">
+          <Paperclip size={16} />
+          <span>Drop files or click to attach — PDF, Excel, Word, PNG, JPG, ZIP</span>
+          <input type="file" multiple hidden onChange={(e) => e.target.files && handleFiles(e.target.files)} />
+        </label>
+        {attachments.length > 0 && (
+          <div className="attachment-list">
+            {attachments.map((a, idx) => (
+              <div className="attachment-item" key={idx}>
+                {fileIcon(a.type)}<span>{a.name}</span>
+                <button onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))} aria-label="Remove attachment"><X size={12} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="form-actions">
         {isEdit && <button className="btn-ghost" onClick={onCancel} disabled={saving}>Cancel</button>}

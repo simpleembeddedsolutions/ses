@@ -3,7 +3,6 @@ import {
   FileText, FileSpreadsheet, FileArchive, FileImage, File as FileGeneric,
   Check, X,
 } from "lucide-react";
-import { TYPE_COLOR } from "./data";
 
 export function uid(): string {
   return Math.random().toString(36).slice(2, 10);
@@ -205,11 +204,7 @@ export function TraceDivider() {
 }
 
 export function TypeBadge({ type }: { type: string }) {
-  return (
-    <span className="badge" style={{ ["--dot" as string]: TYPE_COLOR[type] || "var(--text-secondary)" } as React.CSSProperties}>
-      <span className="badge-dot" />{type}
-    </span>
-  );
+  return <span className="badge">{type}</span>;
 }
 
 export function TagChip({ label, onRemove }: { label: string; onRemove?: () => void }) {

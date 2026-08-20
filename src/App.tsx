@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { FileText, Loader2, AlertTriangle } from "lucide-react";
-import type { Entry, Page } from "./types";
+import type { Entry, Page, SearchFilters } from "./types";
+import { EMPTY_SEARCH_FILTERS } from "./types";
 import { GlobalStyle } from "./GlobalStyle";
 import { Sidebar } from "./components/Sidebar";
 import { Topbar } from "./components/Topbar";
@@ -29,7 +30,9 @@ export default function App() {
   const [deleteError, setDeleteError] = useState("");
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
   const [topQuery, setTopQuery] = useState("");
-  const [searchSeed, setSearchSeed] = useState<{ q: string; iface: string }>({ q: "", iface: "" });
+  // Lifted here (rather than owned by SearchKnowledge) so filters survive
+  // navigating away to an entry — or anywhere else — and back.
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>(EMPTY_SEARCH_FILTERS);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // Light / dark theme — saved choice wins, else follow the OS preference.
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -95,11 +98,15 @@ export default function App() {
     setPage("detail");
   };
   const goToInterface = (name: string) => {
-    setSearchSeed({ q: "", iface: name });
+    setSearchFilters({ ...EMPTY_SEARCH_FILTERS, fInterface: name });
     setPage("search");
   };
   const handleTopSearch = (q: string) => {
-    setSearchSeed({ q, iface: "" });
+    setSearchFilters({ ...EMPTY_SEARCH_FILTERS, q });
+    setPage("search");
+  };
+  const goToSearch = () => {
+    setSearchFilters(EMPTY_SEARCH_FILTERS);
     setPage("search");
   };
   const addEntry = async (entry: Entry) => {
@@ -143,6 +150,7 @@ export default function App() {
   const selectedEntry = entries.find((e) => e.id === selectedId) || null;
   const existingICs = Array.from(new Set(entries.map((e) => e.ic).filter(Boolean)));
   const existingInterfaces = Array.from(new Set(entries.map((e) => e.interface).filter(Boolean)));
+  const existingTypes = Array.from(new Set(entries.flatMap((e) => e.types).filter(Boolean)));
 
   const breadcrumbLabel: Record<Page, string> = {
     dashboard: "Dashboard",
@@ -183,18 +191,19 @@ export default function App() {
                 </div>
               ) : (
                 <>
-                  {page === "dashboard" && <Dashboard entries={entries} recentlyViewed={recentlyViewed} goToEntry={goToEntry} goToInterface={goToInterface} goToAdd={() => navigate("add")} />}
+                  {page === "dashboard" && <Dashboard entries={entries} recentlyViewed={recentlyViewed} goToEntry={goToEntry} goToInterface={goToInterface} goToAdd={() => navigate("add")} goToSearch={goToSearch} />}
                   {page === "add" && (
                     <AddKnowledge
                       key={editingId ?? "new"}
                       onSave={editingEntry ? updateEntry : addEntry}
                       existingICs={existingICs}
                       existingInterfaces={existingInterfaces}
+                      existingTypes={existingTypes}
                       initial={editingEntry}
                       onCancel={() => { setEditingId(null); if (editingEntry) goToEntry(editingEntry.id); else setPage("dashboard"); }}
                     />
                   )}
-                  {page === "search" && <SearchKnowledge entries={entries} initialQuery={searchSeed.q} initialInterface={searchSeed.iface} goToEntry={goToEntry} />}
+                  {page === "search" && <SearchKnowledge entries={entries} filters={searchFilters} onFiltersChange={setSearchFilters} goToEntry={goToEntry} />}
                   {page === "detail" && <KnowledgeDetail entry={selectedEntry} entries={entries} goBack={() => setPage("search")} goToEntry={goToEntry} currentUserId={user.id} onEdit={startEdit} onDelete={setDeleteTarget} />}
                   {page === "review" && <ReviewPackage entries={entries} />}
                   {page === "profile" && <Profile user={user} entries={entries} goToEntry={goToEntry} onEdit={startEdit} onDelete={setDeleteTarget} goToAdd={() => navigate("add")} />}

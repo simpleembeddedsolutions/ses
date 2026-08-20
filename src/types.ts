@@ -1,8 +1,6 @@
-export type KnowledgeType =
-  | "Requirement"
-  | "Checklist"
-  | "Lesson Learned"
-  | "Reference";
+// Open vocabulary: KNOWLEDGE_TYPES in data.ts lists the built-in suggestions,
+// but users can add their own (same pattern as Interface and IC).
+export type KnowledgeType = string;
 
 export interface Attachment {
   name: string;
@@ -33,3 +31,20 @@ export type Page =
   | "settings"
   | "detail"
   | "profile";
+
+// Lifted to App state (rather than owned by SearchKnowledge) so filters
+// survive navigating away to an entry and back.
+export interface SearchFilters {
+  q: string;
+  fInterface: string;
+  fIc: string;
+  fProject: string;
+  fType: string;
+  fTag: string;
+  fromDate: string;
+  toDate: string;
+}
+
+export const EMPTY_SEARCH_FILTERS: SearchFilters = {
+  q: "", fInterface: "", fIc: "", fProject: "", fType: "", fTag: "", fromDate: "", toDate: "",
+};
