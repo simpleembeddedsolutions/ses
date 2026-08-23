@@ -6,7 +6,7 @@ import { SEED_ENTRIES } from "./seed.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // DB_PATH lets a host point the SQLite file at a mounted persistent volume.
-const DB_PATH = process.env.DB_PATH || join(__dirname, "data.db");
+export const DB_PATH = process.env.DB_PATH || join(__dirname, "data.db");
 
 export const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");

@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { existsSync } from "fs";
 import { db, rowToEntry, entryToRow } from "./db.js";
+import { startBackupSchedule } from "./backup.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4000;
@@ -228,4 +229,5 @@ if (existsSync(DIST_DIR)) {
 
 app.listen(PORT, () => {
   console.log(`[server] Knowledge Base running on http://localhost:${PORT}`);
+  startBackupSchedule();
 });
