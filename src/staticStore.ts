@@ -15,6 +15,9 @@ interface StoredUser extends AuthUser {
 const USERS_KEY = "ekb_static_users";
 const ENTRIES_KEY = "ekb_static_entries";
 const TOKEN_KEY = "ekb_token";
+// Marker the old build used to set (alongside the token) when it silently
+// auto-signed a first-time visitor in. Kept only to migrate those sessions away.
+const LEGACY_AUTO_LOGIN_KEY = "ekb_static_seeded";
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -72,6 +75,11 @@ function ensureSeed() {
 /** Called once at startup: seed the demo accounts and sample data. */
 export function staticInit() {
   ensureSeed();
+  // One-time migration: sign out anyone the old build silently auto-logged in.
+  if (localStorage.getItem(LEGACY_AUTO_LOGIN_KEY)) {
+    localStorage.removeItem(LEGACY_AUTO_LOGIN_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+  }
 }
 
 function publicUser(u: StoredUser): AuthUser {
