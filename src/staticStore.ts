@@ -14,7 +14,6 @@ interface StoredUser extends AuthUser {
 
 const USERS_KEY = "ekb_static_users";
 const ENTRIES_KEY = "ekb_static_entries";
-const SEEDED_KEY = "ekb_static_seeded";
 const TOKEN_KEY = "ekb_token";
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/;
@@ -70,13 +69,9 @@ function ensureSeed() {
   if (changed) { write(USERS_KEY, users); write(ENTRIES_KEY, entries); }
 }
 
-/** Called once at startup: seed data and auto-sign-in as demo on the first visit. */
+/** Called once at startup: seed the demo accounts and sample data. */
 export function staticInit() {
   ensureSeed();
-  if (!localStorage.getItem(SEEDED_KEY)) {
-    localStorage.setItem(TOKEN_KEY, "1"); // land straight in the populated app
-    localStorage.setItem(SEEDED_KEY, "1");
-  }
 }
 
 function publicUser(u: StoredUser): AuthUser {

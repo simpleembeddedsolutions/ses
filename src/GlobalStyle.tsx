@@ -657,6 +657,10 @@ export function GlobalStyle() {
         .sidebar-close { display: flex; }
         .menu-btn { display: flex; margin-left: 0; }
         .breadcrumb { display: none; }
+        /* Put the user/logout chip right under the brand instead of pinned
+           to the bottom of the full-height mobile drawer. */
+        .sidebar-footer { order: 1; border-top: none; border-bottom: 1px solid var(--border); padding-top: 0; padding-bottom: 14px; }
+        .nav { order: 2; }
         .two-col, .related-grid, .form-grid, .field-trio, .field-quad { grid-template-columns: 1fr; }
         .field.span-2, .field-trio, .field-quad { grid-column: span 1; }
         .editor-body { grid-template-columns: 1fr; }
