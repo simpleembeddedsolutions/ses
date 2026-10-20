@@ -7,7 +7,7 @@ real API, a SQLite database, and JWT authentication.
 
 ## 🔗 Live demo
 
-**https://arulprakashu1-cpu.github.io/engineering-knowledge-base/**
+**https://simpleembeddedsolutions.github.io/ses/**
 
 A free, backend-free build hosted on GitHub Pages: the same UI, but data lives in your
 browser (`localStorage`) instead of the server, so you can try everything instantly — it

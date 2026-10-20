@@ -163,7 +163,7 @@ function AuthStyle() {
       .auth-field span { font-size: 12px; font-weight: 600; color: var(--text); }
       .auth-field em { font-weight: 400; font-style: normal; color: var(--text-secondary); }
       .auth-field input {
-        border: 1px solid var(--border); background: #fff; color: var(--text);
+        border: 1px solid var(--border); background: var(--surface-alt); color: var(--text);
         border-radius: 5px; padding: 9px 11px; font-size: 14px; font-family: var(--font-body); width: 100%;
       }
       .auth-field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--ring); }
