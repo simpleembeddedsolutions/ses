@@ -178,7 +178,7 @@ function AuthStyle() {
       .auth-hint { display: block; margin-top: 5px; font-size: 11.5px; font-style: normal; color: var(--text-secondary); }
       .auth-submit {
         display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px;
-        background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: 5px;
+        background: var(--btn-grad); color: var(--btn-fg); border: 1px solid var(--accent); border-radius: 5px;
         padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font-body);
       }
       .auth-submit:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); }
